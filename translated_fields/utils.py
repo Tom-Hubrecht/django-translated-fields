@@ -1,8 +1,10 @@
+from typing import Callable
+
+from django.db.models import Field
 from django.utils.functional import keep_lazy_text
 from django.utils.text import capfirst
 
 from .fields import TranslatedField, to_attribute
-
 
 __all__ = [
     "TranslatedFieldWithFallback",
@@ -12,8 +14,8 @@ __all__ = [
 ]
 
 
-def fallback_to_default(name, field):
-    def getter(self):
+def fallback_to_default(name: str, field: TranslatedField) -> Callable[..., str]:
+    def getter(self) -> str:
         return getattr(self, to_attribute(name), None) or getattr(
             self, to_attribute(name, field.languages[0])
         )
@@ -21,8 +23,8 @@ def fallback_to_default(name, field):
     return getter
 
 
-def fallback_to_any(name, field):
-    def getter(self):
+def fallback_to_any(name: str, field: TranslatedField) -> Callable[..., str]:
+    def getter(self) -> str:
         current = getattr(self, to_attribute(name), None)
         if current:
             return current
@@ -36,7 +38,7 @@ def fallback_to_any(name, field):
 
 
 class TranslatedFieldWithFallback(TranslatedField):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         kwargs.setdefault("attrgetter", fallback_to_default)
         super().__init__(*args, **kwargs)
         for language in self.languages[1:]:
@@ -44,7 +46,7 @@ class TranslatedFieldWithFallback(TranslatedField):
             self._specific.setdefault(language, {})["blank"] = True
 
 
-def language_code_formfield_callback(db_field, **kwargs):
+def language_code_formfield_callback(db_field: Field, **kwargs) -> Field:
     language_code = getattr(db_field, "_translated_field_language_code", "")
     if language_code:
         kwargs["label"] = keep_lazy_text(lambda s: f"{s} [{language_code}]")(
